@@ -29,8 +29,7 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-    const { isSignedIn } = useAuth();
-    const { getToken } = useAuth();
+    const { isSignedIn, isLoaded, getToken } = useAuth();
 
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +39,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         try {
             setIsLoading(true);
             const token = await getToken();
+            if (!token) return;
             const { data } = await api.get('/cart', { headers: { Authorization: `Bearer ${token}` } });
             if (data.success && data.data) {
                 const serverCart = data.data;
@@ -72,6 +72,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         try {
             setIsLoading(true);
             const token = await getToken();
+            if (!token) return;
             const { data } = await api.post('/cart/add', { productId: product._id, quantity: 1, size }, { headers: { Authorization: `Bearer ${token}` } });
 
             if (data.success) {
@@ -94,10 +95,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         try {
             setIsLoading(true);
             const token = await getToken();
+            if (!token) return;
             const { data } = await api.delete(`/cart/item/${productId}?size=${size}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                }
+                headers: { Authorization: `Bearer ${token}` }
             });
             if (data.success) {
                 await fetchCart();
@@ -116,6 +116,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         try {
             setIsLoading(true);
             const token = await getToken();
+            if (!token) return;
             const { data } = await api.put(`/cart/item/${productId}`, { quantity, size }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -135,10 +136,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         try {
             setIsLoading(true);
             const token = await getToken();
+            if (!token) return;
             const { data } = await api.delete('/cart', {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                }
+                headers: { Authorization: `Bearer ${token}` }
             });
             if (data.success) {
                 setCartItems([]);
@@ -154,13 +154,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
     useEffect(() => {
-        if (isSignedIn) {
+        if (isLoaded && isSignedIn) {
             fetchCart();
-        } else {
+        } else if (isLoaded && !isSignedIn) {
             setCartItems([]);
             setCartTotal(0);
         }
-    }, [isSignedIn]);
+    }, [isSignedIn, isLoaded]);
 
     return (
         <CartContext.Provider

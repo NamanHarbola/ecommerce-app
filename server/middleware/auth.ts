@@ -17,22 +17,25 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 
         // First login → create DB user ( if webhook fails )
         if (!user) {
-            const clerkUser = await clerkClient.users.getUser(userId);
-            const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+    const clerkUser = await clerkClient.users.getUser(userId);
+    const email = clerkUser.emailAddresses?.[0]?.emailAddress;
 
-            if (!email) {
-                return res.status(401).json({
-                    success: false,
-                    message: "Email not found",
-                });
-            }
+    if (!email) {
+        return res.status(401).json({ success: false, message: "Email not found" });
+    }
 
-            user = await User.create({
+    user = await User.findOneAndUpdate(
+        { clerkId: userId },
+        {
+            $setOnInsert: {
                 name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || "User",
                 email,
                 clerkId: userId,
-            });
-        }
+            }
+        },
+        { upsert: true, new: true }
+    );
+}
 
         req.user = user;
         next();
