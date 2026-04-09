@@ -15,7 +15,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         setLoading(true);
         try {
             const token = await getToken();
-            const { data } = await api.get("/wishlist", { headers: { Authorization: `Bearer ${token}` } });
+            const { data } = await api.get("profile/wishlist", { headers: { Authorization: `Bearer ${token}` } });
             setWishlist(data.data);
         } catch (error) {
             console.error("Error fetching wishlist:", error);

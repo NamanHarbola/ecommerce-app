@@ -1,12 +1,10 @@
 import axios from "axios";
 import { Platform } from "react-native";
 
-// Use the environment variable if available (for production/Vercel)
-// Fallback to local IP for mobile development
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || Platform.select({
-    android: "http://192.168.1.21:3000/api",
-    ios: "http://192.168.1.21:3000/api",
-    default: "http://localhost:3000/api", 
+    android: "http://192.168.1.21:3000/api/", // Added trailing slash
+    ios: "http://192.168.1.21:3000/api/",
+    default: "https://ecommerce-app-a41h.onrender.com/api/", 
 });
 
 const api = axios.create({ 
