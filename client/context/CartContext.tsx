@@ -1,5 +1,5 @@
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import api from '@/constants/api';
+import api from "../constants/api"; // This instance already has the /api base URL
 import { Product } from '@/constants/types';
 import { useAuth } from '@clerk/clerk-expo';
 import Toast from 'react-native-toast-message';
@@ -18,8 +18,8 @@ export type CartItem = {
 type CartContextType = {
     cartItems: CartItem[];
     addToCart: (product: Product, size: string) => Promise<void>;
-    removeFromCart: (itemId: string, size: string) => Promise<void>;
-    updateQuantity: (itemId: string, quantity: number, size: string) => Promise<void>;
+    removeFromCart: (productId: string, size: string) => Promise<void>;
+    updateQuantity: (productId: string, quantity: number, size: string) => Promise<void>;
     clearCart: () => Promise<void>;
     cartTotal: number;
     itemCount: number;
@@ -30,7 +30,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
     const { isSignedIn, isLoaded, getToken } = useAuth();
-
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [cartTotal, setCartTotal] = useState(0);
@@ -40,15 +39,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
             setIsLoading(true);
             const token = await getToken();
             if (!token) return;
-            const { data } = await api.get('/cart', { headers: { Authorization: `Bearer ${token}` } });
+
+            // Updated endpoint to match standard cart controller routes
+            const { data } = await api.get('/cart', { 
+                headers: { Authorization: `Bearer ${token}` } 
+            });
+
             if (data.success && data.data) {
                 const serverCart = data.data;
                 const mappedItems: CartItem[] = serverCart.items.map((item: any) => ({
-                    id: item.product._id,
+                    id: item._id, // Internal ID of the cart item
                     productId: item.product._id,
                     product: item.product,
                     quantity: item.quantity,
-                    size: item?.size || "M",
+                    size: item.size || "M",
                     price: item.price
                 }));
                 setCartItems(mappedItems);
@@ -72,18 +76,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
         try {
             setIsLoading(true);
             const token = await getToken();
-            if (!token) return;
-            const { data } = await api.post('/cart/add', { productId: product._id, quantity: 1, size }, { headers: { Authorization: `Bearer ${token}` } });
+            const { data } = await api.post('/cart/add', 
+                { productId: product._id, quantity: 1, size }, 
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
 
             if (data.success) {
+                Toast.show({ text1: 'Added to cart', type: 'success' });
                 await fetchCart();
             }
         } catch (error) {
             console.error("Failed to add to cart:", error);
-            Toast.show({
-                text1: 'Failed to add to cart',
-                type: 'error',
-            });
+            Toast.show({ text1: 'Failed to add to cart', type: 'error' });
         } finally {
             setIsLoading(false);
         }
@@ -95,8 +99,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         try {
             setIsLoading(true);
             const token = await getToken();
-            if (!token) return;
-            const { data } = await api.delete(`/cart/item/${productId}?size=${size}`, {
+            // Changed endpoint to match common REST patterns for nested resources
+            const { data } = await api.delete(`/cart/item/${productId}`, {
+                params: { size },
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (data.success) {
@@ -109,17 +114,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    const updateQuantity = async (productId: string, quantity: number, size: string = "M") => {
-        if (!isSignedIn) return;
-        if (quantity < 1) return;
+    const updateQuantity = async (productId: string, quantity: number, size: string) => {
+        if (!isSignedIn || quantity < 1) return;
 
         try {
             setIsLoading(true);
             const token = await getToken();
-            if (!token) return;
-            const { data } = await api.put(`/cart/item/${productId}`, { quantity, size }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const { data } = await api.put(`/cart/item/${productId}`, 
+                { quantity, size }, 
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
             if (data.success) {
                 await fetchCart();
             }
@@ -136,7 +140,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         try {
             setIsLoading(true);
             const token = await getToken();
-            if (!token) return;
             const { data } = await api.delete('/cart', {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -154,11 +157,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
     useEffect(() => {
-        if (isLoaded && isSignedIn) {
-            fetchCart();
-        } else if (isLoaded && !isSignedIn) {
-            setCartItems([]);
-            setCartTotal(0);
+        if (isLoaded) {
+            if (isSignedIn) {
+                fetchCart();
+            } else {
+                setCartItems([]);
+                setCartTotal(0);
+            }
         }
     }, [isSignedIn, isLoaded]);
 
