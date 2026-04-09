@@ -23,7 +23,7 @@
       "package": "com.expo.client"
     },
     "web": {
-      "output": "server",
+      "output": "static",
       "favicon": "./assets/images/favicon.png",
       "bundler": "metro"
     },
