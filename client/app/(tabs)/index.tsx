@@ -26,7 +26,7 @@ export default function Home() {
 
     const fetchProducts = async () => {
         try {
-            const { data } = await api.get("/products");
+            const { data } = await api.get("products");
             setProducts(data.data);
         } catch (error) {
             console.error("Error fetching products:", error);
